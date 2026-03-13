@@ -79,9 +79,9 @@
             x: canvas.width / 2,
             y: canvas.height / 2,
             radius: 10,
-            speed: 5,
-            dx: 5,
-            dy: 5,
+            speed: 4,
+            dx: 4,
+            dy: 4,
             color: '#00d4ff'
         };
 
@@ -103,7 +103,7 @@
             width: paddleWidth,
             height: paddleHeight,
             color: '#ff0055',
-            speed: 4
+            speed: 3
         };
 
         let score1 = 0;
@@ -154,7 +154,7 @@
             ball.x = canvas.width / 2;
             ball.y = canvas.height / 2;
             ball.dx = -ball.dx;
-            ball.speed = 5;
+            ball.speed = 4;
         }
 
         function update() {
@@ -163,15 +163,18 @@
             ball.y += ball.dy;
 
             // Wall collision (top/bottom)
-            if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) {
+            if (ball.y + ball.radius >= canvas.height || ball.y - ball.radius <= 0) {
                 ball.dy = -ball.dy;
             }
 
             // Paddle collision
             // Player paddle
-            if (ball.x - ball.radius < player.x + player.width &&
-                ball.y > player.y &&
-                ball.y < player.y + player.height) {
+            if (ball.x - ball.radius <= player.x + player.width &&
+                ball.y >= player.y &&
+                ball.y <= player.y + player.height) {
+                // Push ball outside paddle to prevent sticking
+                ball.x = player.x + player.width + ball.radius + 1;
+                
                 // Calculate hit position for angle variation
                 let hitPoint = ball.y - (player.y + player.height / 2);
                 hitPoint = hitPoint / (player.height / 2);
@@ -182,14 +185,17 @@
                 ball.dx = direction * ball.speed * Math.cos(angleRad);
                 ball.dy = ball.speed * Math.sin(angleRad);
                 
-                // Increase speed slightly on hit
-                ball.speed += 0.5;
+                // Increase speed slightly on hit (cap at max)
+                if (ball.speed < 12) ball.speed += 0.3;
             }
 
             // CPU paddle
-            if (ball.x + ball.radius > cpu.x &&
-                ball.y > cpu.y &&
-                ball.y < cpu.y + cpu.height) {
+            if (ball.x + ball.radius >= cpu.x &&
+                ball.y >= cpu.y &&
+                ball.y <= cpu.y + cpu.height) {
+                // Push ball outside paddle to prevent sticking
+                ball.x = cpu.x - ball.radius - 1;
+                
                 let hitPoint = ball.y - (cpu.y + cpu.height / 2);
                 hitPoint = hitPoint / (cpu.height / 2);
                 
@@ -220,8 +226,8 @@
             }
 
             // Keep paddles in bounds
-            player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
-            cpu.y = Math.max(0, Math.min(canvas.height - cpu.height, cpu.y));
+            player.y = Math.max(paddleHeight/2, Math.min(canvas.height - paddleHeight/2, player.y));
+            cpu.y = Math.max(paddleHeight/2, Math.min(canvas.height - paddleHeight/2, cpu.y));
         }
 
         // Input handling
