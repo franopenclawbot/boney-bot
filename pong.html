@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong - Boney Bot</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a2e;
+            color: #eee;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        h1 {
+            margin: 20px 0;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: #00d4ff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+        .game-container {
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            border: 2px solid #00d4ff;
+        }
+        canvas {
+            display: block;
+            background: #16213e;
+        }
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .instructions {
+            color: #aaa;
+            font-size: 14px;
+        }
+        .score-board {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .score-p1 { color: #00d4ff; }
+        .score-p2 { color: #ff0055; }
+    </style>
+</head>
+<body>
+    <h1>Boney Bot Pong</h1>
+    
+    <div class="score-board">
+        <span class="score-p1">Player: <span id="score1">0</span></span>
+        <span class="score-p2">CPU: <span id="score2">0</span></span>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="pong" width="800" height="500"></canvas>
+    </div>
+    
+    <div class="controls">
+        <p class="instructions">Move your mouse up/down to control the left paddle</p>
+        <button id="resetBtn" style="margin-top: 10px; padding: 10px 20px; font-family: inherit; font-weight: bold; cursor: pointer; border: none; background: #00d4ff; color: #1a1a2e; border-radius: 4px;">Reset Game</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('pong');
+        const ctx = canvas.getContext('2d');
+
+        // Game objects
+        const ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 10,
+            speed: 5,
+            dx: 5,
+            dy: 5,
+            color: '#00d4ff'
+        };
+
+        const paddleWidth = 10;
+        const paddleHeight = 100;
+        const paddleOffset = 20;
+
+        const player = {
+            x: paddleOffset,
+            y: (canvas.height - paddleHeight) / 2,
+            width: paddleWidth,
+            height: paddleHeight,
+            color: '#00d4ff'
+        };
+
+        const cpu = {
+            x: canvas.width - paddleWidth - paddleOffset,
+            y: (canvas.height - paddleHeight) / 2,
+            width: paddleWidth,
+            height: paddleHeight,
+            color: '#ff0055',
+            speed: 4
+        };
+
+        let score1 = 0;
+        let score2 = 0;
+
+        // Draw functions
+        function drawRect(x, y, w, h, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, w, h);
+        }
+
+        function drawCircle(x, y, r, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2, false);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawNet() {
+            for (let i = 0; i <= canvas.height; i += 25) {
+                drawRect(canvas.width / 2 - 1, i, 2, 15, '#333');
+            }
+        }
+
+        function draw() {
+            // Clear canvas
+            drawRect(0, 0, canvas.width, canvas.height, '#16213e');
+
+            drawNet();
+
+            // Draw paddles
+            drawRect(player.x, player.y, player.width, player.height, player.color);
+            drawRect(cpu.x, cpu.y, cpu.width, cpu.height, cpu.color);
+
+            // Draw ball
+            drawCircle(ball.x, ball.y, ball.radius, ball.color);
+
+            // Draw scores
+            ctx.fillStyle = '#fff';
+            ctx.font = '32px "Courier New"';
+            ctx.fillText(score1, canvas.width / 4, 50);
+            ctx.fillText(score2, 3 * canvas.width / 4, 50);
+        }
+
+        // Game logic
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            ball.dx = -ball.dx;
+            ball.speed = 5;
+        }
+
+        function update() {
+            // Move ball
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Wall collision (top/bottom)
+            if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) {
+                ball.dy = -ball.dy;
+            }
+
+            // Paddle collision
+            // Player paddle
+            if (ball.x - ball.radius < player.x + player.width &&
+                ball.y > player.y &&
+                ball.y < player.y + player.height) {
+                // Calculate hit position for angle variation
+                let hitPoint = ball.y - (player.y + player.height / 2);
+                hitPoint = hitPoint / (player.height / 2);
+                
+                let angleRad = hitPoint * (Math.PI / 4);
+                let direction = ball.dx > 0 ? 1 : -1;
+                
+                ball.dx = direction * ball.speed * Math.cos(angleRad);
+                ball.dy = ball.speed * Math.sin(angleRad);
+                
+                // Increase speed slightly on hit
+                ball.speed += 0.5;
+            }
+
+            // CPU paddle
+            if (ball.x + ball.radius > cpu.x &&
+                ball.y > cpu.y &&
+                ball.y < cpu.y + cpu.height) {
+                let hitPoint = ball.y - (cpu.y + cpu.height / 2);
+                hitPoint = hitPoint / (cpu.height / 2);
+                
+                let angleRad = hitPoint * (Math.PI / 4);
+                let direction = -1; // Ball always goes left toward CPU
+                
+                ball.dx = direction * ball.speed * Math.cos(angleRad);
+                ball.dy = ball.speed * Math.sin(angleRad);
+            }
+
+            // Scoring
+            if (ball.x < 0) {
+                score2++;
+                document.getElementById('score2').textContent = score2;
+                resetBall();
+            } else if (ball.x > canvas.width) {
+                score1++;
+                document.getElementById('score1').textContent = score1;
+                resetBall();
+            }
+
+            // CPU AI
+            let cpuCenter = cpu.y + cpu.height / 2;
+            if (cpuCenter < ball.y - 35) {
+                cpu.y += cpu.speed;
+            } else if (cpuCenter > ball.y + 35) {
+                cpu.y -= cpu.speed;
+            }
+
+            // Keep paddles in bounds
+            player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
+            cpu.y = Math.max(0, Math.min(canvas.height - cpu.height, cpu.y));
+        }
+
+        // Input handling
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const rootY = e.clientY - rect.top;
+            player.y = rootY - player.height / 2;
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            score1 = 0;
+            score2 = 0;
+            document.getElementById('score1').textContent = score1;
+            document.getElementById('score2').textContent = score2;
+            resetBall();
+            player.y = (canvas.height - paddleHeight) / 2;
+            cpu.y = (canvas.height - paddleHeight) / 2;
+        });
+
+        // Game loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start game
+        gameLoop();
+    </script>
+</body>
+</html>
